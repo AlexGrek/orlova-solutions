@@ -2,7 +2,17 @@ open System
 
 
 let completeString count (s: string) = 
-    (String.replicate (count - s.Length) "0") + s
+    match count with
+    | 0 ->
+        printfn "returning just nothing" 
+        ""
+    | x when (x - s.Length) = 0 -> 
+        s
+    | x when (x - s.Length) < 0 -> 
+        printfn "Fuck, I cannot complete string %s to %d" s count
+        s
+    | _ -> (String.replicate (count - s.Length) "0") + s
+
 
 let to8 = completeString 8
 
@@ -25,10 +35,8 @@ let toint (i: string) = System.Convert.ToInt32(i, 2)
 
 let intBin (a: int) = System.Convert.ToString(a, 2)
 
-let uintBin (a: uint32) = System.Convert.ToString(System.Convert.ToInt32(a), 2)
+let uintBin (a: uint32) = System.Convert.ToString(System.Convert.ToInt64(a), 2)
 
-let n = 16
-let k = 6
 
 let explode (s:string) =
         [for c in s -> c]
@@ -52,10 +60,12 @@ let toBigUInt ilist =
 
 let XORmasks a b = 
     (toBigUInt a) ^^^ (toBigUInt b)
-let simplifyMask = tobinary
+
+
+let simplifyMask = tobinary >> List.map count1s >> List.reduce (+)
+
 
 let charsToString (a: char list) = List.fold (fun str x -> str + x.ToString()) "" a
-
 
 
 let unsimplifyMask zeros =
@@ -73,7 +83,37 @@ let decimalizeMask = unsimplifyMask >> split10string >> List.map toint
 
 let getBounds xoreduint = 
     let str = uintBin xoreduint |> to32
+    printfn "%s :: %A" str (count1s str, str.IndexOf('1'))
     (count1s str, str.IndexOf('1'))
 
 
-(XORmasks (parseip "255.255.0.0") (parseip "255.255.255.0")) ^^^ uint32 (255 <<< 16 - 8) |> uintBin |> to32
+let uintBin32 = uintBin >> to32
+
+
+let ciscoMaskify (uint: uint32) (a, b) =
+    [ for i in 1..(pown 2 a) -> uint ||| (uint32 i <<< (32 - b - a))]
+
+
+let ciscoNets mask submask ip =
+    let xored = XORmasks mask submask
+    ciscoMaskify (toBigUInt ip)
+    <| ( xored |> getBounds)
+
+// ciscoNets (parseip "255.254.0.0") (parseip "255.255.254.0") (parseip "17.8.0.0")|> List.map fromBigUInt;;
+
+
+let classicMaskify (str: char list) (a, b) =
+    let generate = intBin >> completeString a >> explode >> List.rev
+    [
+        for i in 1..((pown 2 a) - 1) ->
+            str.[..b-1] @ generate i @ str.[b+a..]
+    ]
+    |> List.map charsToString
+
+
+let classicNets mask submask ip =
+    let xored = XORmasks mask submask
+    classicMaskify (toBigUInt ip |> uintBin |> to32 |> explode)
+    <| getBounds xored
+
+// classicNets (parseip "255.255.0.0") (parseip "255.255.255.0") (parseip "0.0.0.0") |> List.map (toint >> fromBigInt);;
