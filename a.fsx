@@ -163,7 +163,7 @@ let generateBitMask (max: int) =
 
 let broadcastHostsClassic mask submask ip =
     let xored = XORmasks mask submask
-    let ones = (ip |> toBigUInt |> uintBin |> count0s)
+    let ones = (submask |> toBigUInt |> uintBin |> count0s)
     classicMaskify (((toBigUInt ip) ||| (uint32 <| generateBitMask ones)) |> uintBin |> to32 |> explode)
         <| getBounds xored
     |> List.map (toint >> fromBigInt)
@@ -171,10 +171,10 @@ let broadcastHostsClassic mask submask ip =
 
 let broadcastHostsCisco mask submask ip =
     let xored = XORmasks mask submask
-    let ones = (ip |> toBigUInt |> uintBin |> count0s)
+    let ones = (submask |> toBigUInt |> uintBin |> count0s)
     ciscoMaskify ((toBigUInt ip) ||| (uint32 <| generateBitMask ones))
         <| getBounds xored
-    |> List.map fromBigInt
+    |> List.map fromBigUInt
 
 
 
