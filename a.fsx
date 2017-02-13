@@ -155,11 +155,27 @@ let broadcastNets mask submask ip =
     |> List.map (toint >> fromBigInt) |> List.rev |> List.head
 
 
-let broadcastHosts mask submask ip =
+
+let generateBitMask (max: int) =
+    (pown 2 max) - 1
+
+
+
+let broadcastHostsClassic mask submask ip =
     let xored = XORmasks mask submask
-    classicMaskify (toBigUInt ip |> uintBin |> to32 |> explode)
+    let ones = (ip |> toBigUInt |> uintBin |> count0s)
+    classicMaskify (((toBigUInt ip) ||| (uint32 <| generateBitMask ones)) |> uintBin |> to32 |> explode)
         <| getBounds xored
-    |> List.map (toint >> fromBigInt) |> List.rev |> List.head
+    |> List.map (toint >> fromBigInt)
+
+
+let broadcastHostsCisco mask submask ip =
+    let xored = XORmasks mask submask
+    let ones = (ip |> toBigUInt |> uintBin |> count0s)
+    ciscoMaskify ((toBigUInt ip) ||| (uint32 <| generateBitMask ones))
+        <| getBounds xored
+    |> List.map fromBigInt
+
 
 
 let generateVals max uip =
@@ -168,8 +184,8 @@ let generateVals max uip =
         ]
 
 
-let listHostsi mask submask ip i =
-    let hosts = classicNets mask submask ip
+let listHostsi func mask submask ip i =
+    let hosts: int list list = func mask submask ip
     let uip = toBigUInt hosts.[i-1]
     let usub = toBigUInt ip
     generateVals (uintBin uip |> count0s) uip
