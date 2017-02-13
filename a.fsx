@@ -92,7 +92,7 @@ let decimalizeMask = unsimplifyMask >> split10string >> List.map toint
 
 let getBounds xoreduint = 
     let str = uintBin xoreduint |> to32
-    printfn "%s :: %A" str (count1s str, str.IndexOf('1'))
+    //printfn "%s :: %A" str (count1s str, str.IndexOf('1'))
     (count1s str, str.IndexOf('1'))
 
 
@@ -190,3 +190,42 @@ let listHostsi func mask submask ip i =
     let usub = toBigUInt ip
     generateVals (uintBin uip |> count0s) uip
     |> List.map fromBigUInt
+
+let prefix submask =
+    (toBigUInt submask) |> uintBin32 |> count1s
+
+let countsubnets mask submask =
+    (pown 2 (XORmasks mask submask |> uintBin32 |> count1s)) - 2
+
+let counthosts submask =
+    (pown 2 ((toBigUInt submask) |> uintBin32 |> count0s)) - 2
+
+let solve mask submask ip i =
+    let pref = prefix submask
+    printfn "Class: %A, default mask: %s" (getCategory ip) (unparseip <| getDefaultMask ip)
+    printfn "Mask: %A" (tobinary mask)
+    printfn "Subnet Mask: %A (/%d)" (tobinary submask) pref
+    printfn "Possible subnets: %d and hosts: %d" (countsubnets mask submask) (counthosts submask)
+    printfn "Networks: "
+    printfn "   Classic: %A" (classicNets mask submask ip |> List.map (unparsePrefix pref))
+    printfn "   Cisco: %A" (ciscoNets mask submask ip |> List.map (unparsePrefix pref))
+    printfn "Hosts for %d subnet (cisco): %A" i (listHostsi ciscoNets mask submask ip i |> List.map unparseip)
+    printfn "Hosts for %d subnet (classic): %A" i (listHostsi classicNets mask submask ip i |> List.map unparseip)
+    printfn "Broadcast: "
+    printfn "   all subnets: %A" ( (broadcastNets mask submask ip) |> unparseip)
+    printfn "   all hosts (classic): %A" (broadcastHostsClassic mask submask ip |> List.map unparseip)
+    printfn "   all hosts (cisco): %A" (broadcastHostsCisco mask submask ip |> List.map unparseip)
+
+
+let go (mask: string) (submask: string) (ip: string) (i: int) =
+    solve (parseip mask) (parseip submask) (parseip ip) i
+
+
+go "255.255.255.0" "255.255.255.240" "143.1.37.0" 3;; // nastya 1
+
+go "255.255.0.0" "255.255.252.0" "138.0.0.0" 4;; // nastya 3
+
+go "255.255.0.0" "255.255.255.128" "12.85.0.0" 4;; // nastya 2
+
+go "255.255.0.0" "255.255.248.0" "17.5.0.0" 3;;
+
