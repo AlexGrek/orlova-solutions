@@ -28,12 +28,21 @@ let unparseip (strs: int list) =
     let map = List.map (fun x -> x.ToString()) strs
     System.String.Join (".", map)
 
+
+let unparsePrefix (pref: int) (strs: int list) =
+    let map = List.map (fun x -> x.ToString()) strs
+    System.String.Join (".", map) + "/" + pref.ToString()
+
+
 let tobinary arr =
     List.map (fun (x: int) -> (to8 (System.Convert.ToString(x, 2)))) arr
 
+
 let toint (i: string) = System.Convert.ToInt32(i, 2)
 
+
 let intBin (a: int) = System.Convert.ToString(a, 2)
+
 
 let uintBin (a: uint32) = System.Convert.ToString(System.Convert.ToInt64(a), 2)
 
@@ -97,9 +106,10 @@ let ciscoMaskify (uint: uint32) (a, b) =
 let ciscoNets mask submask ip =
     let xored = XORmasks mask submask
     ciscoMaskify (toBigUInt ip)
-    <| ( xored |> getBounds)
+        <| ( xored |> getBounds)
+    |> List.map fromBigUInt
 
-// ciscoNets (parseip "255.254.0.0") (parseip "255.255.254.0") (parseip "17.8.0.0")|> List.map fromBigUInt;;
+// ciscoNets (parseip "255.254.0.0") (parseip "255.255.254.0") (parseip "17.8.0.0");;
 
 
 let classicMaskify (str: char list) (a, b) =
@@ -114,6 +124,53 @@ let classicMaskify (str: char list) (a, b) =
 let classicNets mask submask ip =
     let xored = XORmasks mask submask
     classicMaskify (toBigUInt ip |> uintBin |> to32 |> explode)
-    <| getBounds xored
+        <| getBounds xored
+    |> List.map (toint >> fromBigInt)
 
-// classicNets (parseip "255.255.0.0") (parseip "255.255.255.0") (parseip "0.0.0.0") |> List.map (toint >> fromBigInt);;
+// classicNets (parseip "255.255.0.0") (parseip "255.255.255.0") (parseip "0.0.0.0");
+
+type ipclass = A | B | C | D | NOPE
+
+let getCategory = function
+    | [x; _; _; _] when x < 127 -> A
+    | [x; _; _; _] when x < 191 -> B
+    | [x; _; _; _] when x < 223 -> C
+    | [x; _; _; _] when x < 239 -> D
+    | _ -> NOPE
+
+
+let getDefaultMask ip =
+    let category = getCategory ip
+    match category with
+    | A -> [255; 0; 0; 0]
+    | B -> [255; 255; 0; 0]
+    | C -> [255; 255; 255; 0]
+    | _ -> failwith "wtf"
+
+
+let broadcastNets mask submask ip =
+    let xored = XORmasks mask submask
+    classicMaskify (toBigUInt ip |> uintBin |> to32 |> explode)
+        <| getBounds xored
+    |> List.map (toint >> fromBigInt) |> List.rev |> List.head
+
+
+let broadcastHosts mask submask ip =
+    let xored = XORmasks mask submask
+    classicMaskify (toBigUInt ip |> uintBin |> to32 |> explode)
+        <| getBounds xored
+    |> List.map (toint >> fromBigInt) |> List.rev |> List.head
+
+
+let generateVals max uip =
+        [
+            for x in 1..max -> uip ||| uint32 x
+        ]
+
+
+let listHostsi mask submask ip i =
+    let hosts = classicNets mask submask ip
+    let uip = toBigUInt hosts.[i-1]
+    let usub = toBigUInt ip
+    generateVals (uintBin uip |> count0s) uip
+    |> List.map fromBigUInt
