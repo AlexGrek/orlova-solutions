@@ -154,12 +154,8 @@ let broadcastNets mask submask ip =
         <| getBounds xored
     |> List.map (toint >> fromBigInt) |> List.rev |> List.head
 
-
-
 let generateBitMask (max: int) =
     (pown 2 max) - 1
-
-
 
 let broadcastHostsClassic mask submask ip =
     let xored = XORmasks mask submask
@@ -176,12 +172,15 @@ let broadcastHostsCisco mask submask ip =
         <| getBounds xored
     |> List.map fromBigUInt
 
-
-
 let generateVals max uip =
         [
             for x in 1..max -> uip ||| uint32 x
         ]
+
+let broadcastAllHosts submask ip =
+    let maskones = System.UInt32.MaxValue // so much 1s
+    (toBigUInt submask) ^^^ maskones ||| (toBigUInt ip)
+    |> fromBigUInt
 
 
 let listHostsi func mask submask ip i =
@@ -212,9 +211,10 @@ let solve mask submask ip i =
     printfn "Hosts for %d subnet (cisco): %A" i (listHostsi ciscoNets mask submask ip i |> List.map unparseip)
     printfn "Hosts for %d subnet (classic): %A" i (listHostsi classicNets mask submask ip i |> List.map unparseip)
     printfn "Broadcast: "
-    printfn "   all subnets: %A" ( (broadcastNets mask submask ip) |> unparseip)
+    printfn "   all subnets: %A" ((broadcastNets mask submask ip) |> unparseip)
     printfn "   all hosts (classic): %A" (broadcastHostsClassic mask submask ip |> List.map unparseip)
     printfn "   all hosts (cisco): %A" (broadcastHostsCisco mask submask ip |> List.map unparseip)
+    printfn "   all hosts in all subnets: %s" ((broadcastAllHosts submask ip) |> unparseip)
 
 
 let go (mask: string) (submask: string) (ip: string) (i: int) =
