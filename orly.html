@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"></meta>
+        <link rel="stylesheet" href="style.css"></link>
+        <title>IP datagrams</title>
+        <script src="orly.js"></script> 
+    </head>
+    <body>
+        <h3>Message size <i>(including header)</i></h3>
+        <input type="number" id="msize"></input>
+        <p>Header size (optional)<b> (it should be included in SIZE field!) </b></p>
+        <input type="number" id="hsize"></input>
+        <h3>TTL</h3>
+        <button onclick="document.getElementById('ttl').value = 0">device</button>
+        <button onclick="document.getElementById('ttl').value = 1">net</button>
+        <button onclick="document.getElementById('ttl').value = 32">область</button>
+        <button onclick="document.getElementById('ttl').value = 64">регион</button>
+        <button onclick="document.getElementById('ttl').value = 128">континент</button>
+        <button onclick="document.getElementById('ttl').value = 255">unlimited</button>
+        <input type="number" id="ttl"></input>
+        <h3>MTU <i>(max transfer unit)</i></h3>
+        <input type="number" id="mtu"></input>
+        <button onclick="calculate()">Split</button>
+
+        <div id="microconsole"></div>
+    </body>
+</html>
